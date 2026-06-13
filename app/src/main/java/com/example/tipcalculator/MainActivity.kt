@@ -35,6 +35,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.tipcalculator.ui.theme.TipCalculatorTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.Row
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -149,5 +155,115 @@ fun TipCalculatorScreen(modifier: Modifier = Modifier) {
 fun TipCalculatorPreview() {
     TipCalculatorTheme {
         TipCalculatorScreen()
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TipCalculatorScreen(modifier: Modifier = Modifier) {
+    var billAmount by remember { mutableStateOf("") }
+
+    // Состояние слайдера: диапазон 0f..25f
+    var sliderPosition by remember { mutableFloatStateOf(0f) }
+
+    // Автоматическое обновление текстового поля при изменении слайдера
+    val tipDisplayText = remember(sliderPosition) {
+        if (sliderPosition > 0f) "${sliderPosition.toInt()}%" else ""
+    }
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // ===== ПОЛЕ 1: Сумма счета (без изменений) =====
+        OutlinedTextField(
+            value = billAmount,
+            onValueChange = { newValue ->
+                if (newValue.isEmpty() || newValue.matches(Regex("^\\d*\\.?\\d*$"))) {
+                    billAmount = newValue
+                }
+            },
+            label = { Text("Сумма счета") },
+            leadingIcon = {
+                Icon(Icons.Default.AttachMoney, "Сумма",
+                    tint = MaterialTheme.colorScheme.primary)
+            },
+            placeholder = { Text("Введите сумму") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                focusedLabelColor = MaterialTheme.colorScheme.primary
+            )
+        )
+
+        // ===== ПОЛЕ 2: Процент чаевых (обновляем значение из слайдера) =====
+        OutlinedTextField(
+            value = tipDisplayText,
+            onValueChange = { },
+            label = { Text("Процент чаевых") },
+            leadingIcon = {
+                Icon(Icons.Default.Percent, "Процент", tint = Color(0xFFE91E63))
+            },
+            placeholder = { Text("Выберите процент") },
+            readOnly = true,
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = Color(0xFFE91E63),
+                unfocusedBorderColor = Color(0xFFE91E63).copy(alpha = 0.5f),
+                focusedLabelColor = Color(0xFFE91E63)
+            )
+        )
+
+        // ==========================================
+        // СЛАЙДЕР: Диапазон 0-25 процентов
+        // ==========================================
+        Column(modifier = Modifier.fillMaxWidth()) {
+            // Сам слайдер
+            Slider(
+                value = sliderPosition,
+                onValueChange = { newPosition ->
+                    sliderPosition = newPosition
+                },
+                valueRange = 0f..25f,      // ★ Диапазон по заданию: 0 до 25
+                steps = 24,                  // 25 дискретных значений (0,1,2,...,25)
+                modifier = Modifier.fillMaxWidth(),
+                colors = SliderDefaults.colors(
+                    thumbColor = MaterialTheme.colorScheme.primary,
+                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                    inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            )
+
+            // Подписи под слайдером
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "0",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "25",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "Здесь будут радиокнопки...",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
