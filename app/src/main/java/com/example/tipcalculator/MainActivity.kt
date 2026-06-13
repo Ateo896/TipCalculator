@@ -28,7 +28,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -43,8 +42,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.tooling.preview.Preview
 import com.example.tipcalculator.ui.theme.TipCalculatorTheme
+import java.util.Locale
+import androidx.compose.material3.CenterAlignedTopAppBar
 
+@OptIn(ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,7 +56,11 @@ class MainActivity : ComponentActivity() {
             TipCalculatorTheme {
                 Scaffold(
                     topBar = {
-                        TopAppBar(title = { Text("Калькулятор чаевых") })
+                        CenterAlignedTopAppBar(
+                            title = {
+                                Text("Калькулятор чаевых")
+                            }
+                        )
                     },
                     modifier = Modifier.fillMaxSize()
                 ) { innerPadding ->
@@ -65,51 +72,44 @@ class MainActivity : ComponentActivity() {
 }
 
 /**
- * Определяет количество "блоков" на основе суммы счета
- * и возвращает соответствующий процент чаевых
+ * Определяет процент чаевых на основе суммы счета ("блоки"):
+ * 1-2 блока (≤1000) → 3%
+ * 3-5 блоков (1001-3000) → 5%
+ * 6-10 блоков (3001-7000) → 7%
+ * >10 блоков (>7000) → 10%
  */
 fun calculateTipPercentFromBill(billAmount: Double): Float {
     return when {
-        billAmount <= 1000 -> 3f    // 1-2 блока → 3%
-        billAmount <= 3000 -> 5f    // 3-5 блоков → 5%
-        billAmount <= 7000 -> 7f    // 6-10 блоков → 7%
-        else -> 10f                 // >10 блоков → 10%
+        billAmount <= 1000 -> 3f
+        billAmount <= 3000 -> 5f
+        billAmount <= 7000 -> 7f
+        else -> 10f
     }
 }
 
 /**
- * Возвращает индекс выбранной радиокнопки (0-3) на основе процента
+ * Возвращает индекс радиокнопки (0-3) на основе процента
  */
 fun getRadioIndexFromPercent(percent: Float): Int {
     return when {
-        percent <= 3f -> 0   // 3%
-        percent <= 5f -> 1   // 5%
-        percent <= 7f -> 2   // 7%
-        else -> 3            // 10%
+        percent <= 3f -> 0
+        percent <= 5f -> 1
+        percent <= 7f -> 2
+        else -> 3
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TipCalculatorScreen(modifier: Modifier = Modifier) {
-    // ========== СОСТОЯНИЯ ПРИЛОЖЕНИЯ ==========
 
-    // Текстовое поле суммы счета (пустое при старте)
+    // ========== СОСТОЯНИЯ ==========
     var billAmountText by remember { mutableStateOf("") }
-
-    // Позиция слайдера (0-25), начальное значение 0
     var sliderPosition by remember { mutableFloatStateOf(0f) }
-
-    // Индекс выбранной радиокнопки (0=3%, 1=5%, 2=7%, 3=10%)
-    // Управляется ПРОГРАММНО, не пользователем!
-    var selectedRadioIndex by remember { mutableIntStateOf(-1) } // -1 = ничего не выбрано
-
-    // Список опций радиокнопок
+    var selectedRadioIndex by remember { mutableIntStateOf(-1) }
     val tipOptions = listOf(3, 5, 7, 10)
 
-    // ========== АВТОМАТИЧЕСКАЯ ЛОГИКА ВЫБОРА ==========
-
-    // Когда изменяется сумма счета → автоматически пересчитываем % и выбираем радиокнопку
+    // ========== АВТО-ЛОГИКА ==========
     LaunchedEffect(billAmountText) {
         val amount = billAmountText.toDoubleOrNull()
         if (amount != null && amount > 0) {
@@ -117,33 +117,29 @@ fun TipCalculatorScreen(modifier: Modifier = Modifier) {
             sliderPosition = autoPercent
             selectedRadioIndex = getRadioIndexFromPercent(autoPercent)
         } else {
-            // Если сумма пустая или некорректная → сброс
             selectedRadioIndex = -1
+            sliderPosition = 0f
         }
     }
 
-    // Когда пользователь двигает слайдер вручную → обновляем радиокнопку
     LaunchedEffect(sliderPosition) {
         if (sliderPosition > 0) {
             selectedRadioIndex = getRadioIndexFromPercent(sliderPosition)
         }
     }
 
-    // Отображаемый текст в поле процента
     val displayPercentage = if (sliderPosition > 0f) "${sliderPosition.toInt()}%" else ""
 
-    // ========== UI КОМПОНЕНТЫ ==========
-
+    // ========== UI ==========
     Column(
         modifier = modifier
             .fillMaxSize()
             .padding(horizontal = 20.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(28.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // ────────────────────────────────────────────────
-        // ПОЛЕ 1: СУММА СЧЕТА (синяя тема)
-        // ────────────────────────────────────────────────
+
+        // ─── ПОЛЕ 1: СУММА СЧЕТА ───
         OutlinedTextField(
             value = billAmountText,
             onValueChange = { input ->
@@ -165,17 +161,14 @@ fun TipCalculatorScreen(modifier: Modifier = Modifier) {
             modifier = Modifier.fillMaxWidth(),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = MaterialTheme.colorScheme.primary,
-                focusedLabelColor = MaterialTheme.colorScheme.primary,
-                cursorColor = MaterialTheme.colorScheme.primary
+                focusedLabelColor = MaterialTheme.colorScheme.primary
             )
         )
 
-        // ────────────────────────────────────────────────
-        // ПОЛЕ 2: ПРОЦЕНТ ЧАЕВЫХ (розовая тема, read-only)
-        // ────────────────────────────────────────────────
+        // ─── ПОЛЕ 2: ПРОЦЕНТ ЧАЕВЫХ ───
         OutlinedTextField(
             value = displayPercentage,
-            onValueChange = { }, // Запрещаем ручной ввод
+            onValueChange = { },
             label = { Text("Процент чаевых") },
             leadingIcon = {
                 Icon(
@@ -191,17 +184,11 @@ fun TipCalculatorScreen(modifier: Modifier = Modifier) {
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = Color(0xFFE91E63),
                 unfocusedBorderColor = Color(0xFFE91E63).copy(alpha = 0.4f),
-                focusedLabelColor = Color(0xFFE91E63),
-                disabledTextColor = MaterialTheme.colorScheme.onSurface,
-                disabledBorderColor = Color(0xFFE91E63).copy(alpha = 0.4f),
-                disabledLabelColor = Color(0xFFE91E63).copy(alpha = 0.6f),
-                disabledPlaceholderColor = Color(0xFFE91E63).copy(alpha = 0.4f)
+                focusedLabelColor = Color(0xFFE91E63)
             )
         )
 
-        // ────────────────────────────────────────────────
-        // СЛАЙДЕР: 0 – 25 процентов
-        // ────────────────────────────────────────────────
+        // ─── СЛАЙДЕР: 0 – 25% ───
         Column(modifier = Modifier.fillMaxWidth()) {
             Slider(
                 value = sliderPosition,
@@ -220,23 +207,12 @@ fun TipCalculatorScreen(modifier: Modifier = Modifier) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
-                    "0",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    "25",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Text("0", style = MaterialTheme.typography.bodySmall)
+                Text("25", style = MaterialTheme.typography.bodySmall)
             }
         }
 
-        // ────────────────────────────────────────────────
-        // ГРУППА РАДИОКНОПОК: 3%, 5%, 7%, 10%
-        // (Программный выбор, НЕ пользовательский!)
-        // ────────────────────────────────────────────────
+        // ─── РАДИОКНОПКИ ───
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly,
@@ -248,45 +224,33 @@ fun TipCalculatorScreen(modifier: Modifier = Modifier) {
                     modifier = Modifier.padding(horizontal = 4.dp)
                 ) {
                     RadioButton(
-                        // ★ Выбор управляется переменной selectedRadioIndex
                         selected = selectedRadioIndex == index,
-                        onClick = {
-                            // Можно разрешить клик для ручного переключения,
-                            // но по заданию выбор ПРОГРАММНЫЙ.
-                            // Оставляем пустым или синхронизируем со слайдером:
-                            sliderPosition = percent.toFloat()
-                        },
-                        enabled = true,
+                        onClick = { sliderPosition = percent.toFloat() },
                         colors = RadioButtonDefaults.colors(
-                            selectedColor = MaterialTheme.colorScheme.primary,
-                            unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            selectedColor = MaterialTheme.colorScheme.primary
                         )
                     )
-
                     Text(
                         text = "$percent%",
                         style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.Center,
                         modifier = Modifier.width(32.dp)
                     )
                 }
             }
         }
 
-        // ────────────────────────────────────────────────
-        // ИНФОРМАЦИОННАЯ ПАНЕЛЬ (опционально)
-        // ────────────────────────────────────────────────
-        Spacer(modifier = Modifier.height(8.dp))
+        // ─── РЕЗУЛЬТАТ (ИСПРАВЛЕНО!) ───
+        Spacer(modifier = Modifier.height(16.dp))
 
-        if (billAmountText.isNotEmpty()) {
+        if (billAmountText.isNotEmpty() && sliderPosition > 0) {
             val amount = billAmountText.toDoubleOrNull() ?: 0.0
             val tipAmount = amount * sliderPosition / 100
             val totalAmount = amount + tipAmount
 
             Text(
-                text = "Чаевые: ${String.format("%.2f", tipAmount)} ₽\n" +
-                        "Итого: ${String.format("%.2f", totalAmount)} ₽",
-                style = MaterialTheme.titleMedium,
+                text = "Чаевые: ${String.format(Locale.getDefault(), "%.2f", tipAmount)} ₽\n" +
+                        "Итого: ${String.format(Locale.getDefault(), "%.2f", totalAmount)} ₽",
+                style = MaterialTheme.typography.bodyLarge, // ★ Безопасный вариант!
                 color = MaterialTheme.colorScheme.primary,
                 textAlign = TextAlign.Center
             )
@@ -295,8 +259,9 @@ fun TipCalculatorScreen(modifier: Modifier = Modifier) {
 }
 
 // ==================== PREVIEW ====================
+// Исправлен импорт Preview!
 
-@Preview(showBackground = true, showSystemUi = true, device = "spec:width=360dp,height=640dp")
+@Preview(showBackground = true, showSystemUi = true)
 @Composable
 fun TipCalculatorPreview() {
     TipCalculatorTheme {
